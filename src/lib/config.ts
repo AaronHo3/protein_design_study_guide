@@ -1,0 +1,39 @@
+// Public, browser-safe configuration. Only the Supabase URL and the publishable
+// (or legacy anon) key belong here — never a service-role/secret key.
+export interface CloudConfig {
+  url: string
+  key: string
+}
+
+function read(): CloudConfig | null {
+  const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim()
+  const key = (
+    (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
+    (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)
+  )?.trim()
+  if (!url || !key) return null
+  if (!/^https?:\/\//.test(url)) return null
+  assertBrowserSafeKey(key)
+  return { url, key }
+}
+
+/** Refuses secret keys: new-style `sb_secret_…` and legacy JWTs whose role isn't `anon`. */
+export function assertBrowserSafeKey(key: string): void {
+  const message = 'A Supabase secret/service-role key was provided to the browser build. Use the publishable (or anon) key instead.'
+  if (key.startsWith('sb_secret_') || /service_role/i.test(key)) throw new Error(message)
+  if (key.startsWith('sb_publishable_')) return
+  const parts = key.split('.')
+  if (parts.length === 3) {
+    let role: unknown
+    try {
+      const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+      role = (JSON.parse(atob(payload.padEnd(payload.length + ((4 - (payload.length % 4)) % 4), '='))) as { role?: unknown }).role
+    } catch {
+      return // Not a decodable JWT; Supabase will reject it if it's invalid.
+    }
+    if (role !== 'anon') throw new Error(message)
+  }
+}
+
+export const cloudConfig: CloudConfig | null = read()
+export const isDemoMode = cloudConfig === null
