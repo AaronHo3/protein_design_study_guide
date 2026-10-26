@@ -2,6 +2,7 @@ import { DndContext } from '@dnd-kit/core'
 import { ChevronLeft, ChevronRight, MoveHorizontal, Repeat } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { StudyGuideScheduleDialog } from '../components/planner/StudyGuideScheduleDialog'
 import { GenerateDialog, ShiftDialog } from '../components/planner/bulk'
 import { PlanWeek } from '../components/planner/PlanWeek'
 import { useDragHandlers } from '../components/planner/useDragHandlers'
@@ -34,7 +35,7 @@ export function PlannerPage() {
   const requested = params.get('view') as View | null
   const view: View = requested ?? (wide ? 'week' : 'agenda')
   const anchor = isISODate(params.get('date')) ? (params.get('date') as string) : today
-  const [dialog, setDialog] = useState<'generate' | 'shift' | null>(null)
+  const [dialog, setDialog] = useState<'generate' | 'shift' | 'guide' | null>(null)
   const { sensors, onDragEnd } = useDragHandlers()
 
   const set = (patch: Record<string, string | null>) =>
@@ -83,6 +84,7 @@ export function PlannerPage() {
         subtitle="Arrange sessions on your calendar. Drag on desktop, or use each block’s menu (also keyboard-accessible)."
         actions={
           <>
+            <Button size="sm" onClick={() => setDialog('guide')}>Schedule study guide…</Button>
             {hasRules && (
               <Button size="sm" onClick={() => setDialog('generate')}><Repeat /> Add recurring blocks</Button>
             )}
@@ -121,6 +123,7 @@ export function PlannerPage() {
         </div>
       </DndContext>
 
+      {dialog === 'guide' && <StudyGuideScheduleDialog start={today} onClose={() => setDialog(null)} />}
       {dialog === 'generate' && <GenerateDialog start={weekStart} end={addDays(weekStart, 6)} onClose={() => setDialog(null)} />}
       {dialog === 'shift' && <ShiftDialog initialFrom={today} onClose={() => setDialog(null)} />}
     </div>
