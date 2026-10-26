@@ -1,6 +1,8 @@
 // An optional, unscheduled curriculum. Each lesson is an independently editable session.
-import { insert, type Change } from './changes'
-import { newCheckpoint, newResource, newSession, newSessionResource, newStage, newTask, newTopic, newTrack, type Ctx } from './factories'
+import { insert, update, type Change } from './changes'
+import { addDays, weekday } from '../lib/dates'
+import { blockState } from './completion'
+import { newBlock, newCheckpoint, newResource, newSession, newSessionResource, newStage, newTask, newTopic, newTrack, type Ctx } from './factories'
 import type { ResourceType, Snapshot } from './types'
 
 type Key = 'bio' | 'comp' | 'ai'
@@ -141,4 +143,80 @@ export function buildStudyGuide(current: Snapshot, ctx: Ctx): Change[] {
  if(tasks.length) changes.push(insert('tasks',tasks))
  if(links.length) changes.push(insert('session_resources',links))
  return changes
+}
+
+
+const sampleTitles = new Set([
+  'Draw the relationship between atoms, amino acids, sequences, and folded proteins',
+  'Write a Python amino-acid-sequence validator',
+  'Define a prediction task’s inputs, outputs, labels, and baseline',
+  'Compare amino-acid side-chain properties', 'Count residue frequencies',
+  'Compare token IDs, one-hot encoding, and embeddings', 'Explain levels of protein structure',
+  'Calculate distances between 3-D coordinates', 'Trace a small network’s forward pass and tensor shapes',
+  'Explain major interactions and steric clashes', 'Practice matrix multiplication',
+  'Explain loss, gradients, and parameter updates', 'Recall and connect the week’s concepts',
+  'Combine exercises into a documented script', 'Review outputs, identify gaps, and plan next steps',
+])
+
+export interface GuidePlacement { date: string; title: string; track: string; replaced: string | null }
+export interface GuideSchedule { changes: Change[]; placements: GuidePlacement[]; remaining: number }
+
+/** Preview a staged sequence without changing existing progress or occupied blocks. */
+export function planStudyGuide(snapshot: Snapshot, start: string, ctx: Ctx): GuideSchedule {
+  const settings = snapshot.settings[0]
+  const days = settings?.study_days ?? [1,2,3,4,5]
+  if (!days.length) return { changes: [], placements: [], remaining: 0 }
+  const placed = new Set(snapshot.blocks.map(b => b.session_id).filter(Boolean))
+  const changes: Change[] = [], placements: GuidePlacement[] = []
+  const additions: ReturnType<typeof newBlock>[] = []
+  let date = start, remaining = 0
+  const safeSample = (sessionId: string) => {
+    const session = snapshot.sessions.find(s => s.id === sessionId)
+    if (!session || !sampleTitles.has(session.title) || session.status !== 'planned') return false
+    const tasks = snapshot.tasks.filter(t => t.session_id === sessionId)
+    if (!tasks.some(t => t.required && t.title === session.title) || tasks.some(t => t.done)) return false
+    if (snapshot.notes.some(n => n.session_id === sessionId) || snapshot.session_resources.some(r => r.session_id === sessionId)) return false
+    return true
+  }
+  const nextStudy = () => { while (!days.includes(weekday(date))) date = addDays(date, 1) }
+  for (const unit of units) {
+    const queues = (Object.keys(tracks) as Key[]).map(key => ({ key, lessons: unit.lessons.filter(l => l.track === key).flatMap(l => {
+      const s = snapshot.sessions.find(x => x.title === l.title && x.description.includes(marker) && !x.archived_at)
+      return s && !placed.has(s.id) && s.status !== 'completed' && s.status !== 'skipped' ? [s] : []
+    }) }))
+    let guard = 0
+    while (queues.some(q => q.lessons.length) && guard++ < 1000) {
+      nextStudy()
+      let dayMinutes = snapshot.blocks.filter(b => b.date === date && blockState(b, snapshot.sessions, snapshot.tasks) !== 'skipped').reduce((sum,b) => sum+b.duration_min, 0)
+      let position = snapshot.blocks.filter(b => b.date === date).length
+      for (const queue of queues) {
+        const session = queue.lessons[0]
+        if (!session) continue
+        const slots = snapshot.blocks.filter(b => b.date === date && b.track_id === session.track_id && blockState(b,snapshot.sessions,snapshot.tasks) === 'planned')
+        const slot = slots.find(b => !b.session_id || safeSample(b.session_id))
+        if (slot) {
+          const replaced = slot.session_id ? snapshot.sessions.find(s=>s.id===slot.session_id)?.title ?? null : null
+          const change = update('blocks', slot, { session_id: session.id })
+          if (change) changes.push(change)
+          placements.push({date,title:session.title,track:tracks[queue.key].name,replaced})
+          queue.lessons.shift()
+          continue
+        }
+        if (slots.length || snapshot.blocks.some(b => b.date === date && b.track_id === session.track_id)) continue
+        // Materialize a matching recurring slot when available to prevent later generation creating a duplicate.
+        const rule = snapshot.recurring_blocks.find(r => !r.archived_at && r.track_id === session.track_id && r.starts_on <= date && (!r.ends_on || r.ends_on >= date) && r.weekdays.includes(weekday(date)))
+        if (rule && snapshot.blocks.some(b => b.recurrence_id === rule.id && b.occurrence_date === date)) continue
+        const duration = rule?.duration_min ?? session.planned_min ?? 120
+        if (dayMinutes + duration > (settings?.daily_capacity_min ?? 360)) continue
+        additions.push(newBlock(ctx, { date, position:position++, session_id:session.id, track_id:session.track_id, duration_min: rule?.duration_min ?? duration, start_time: rule?.start_time ?? null, required: rule?.required ?? true, title: rule?.title ?? '', recurrence_id:rule?.id ?? null, occurrence_date:rule ? date : null }))
+        dayMinutes += rule?.duration_min ?? duration
+        placements.push({date,title:session.title,track:tracks[queue.key].name,replaced:null})
+        queue.lessons.shift()
+      }
+      date = addDays(date, 1)
+    }
+    remaining += queues.reduce((sum,q)=>sum+q.lessons.length,0)
+  }
+  if (additions.length) changes.push(insert('blocks', additions))
+  return { changes, placements, remaining }
 }
