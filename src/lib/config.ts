@@ -6,11 +6,14 @@ export interface CloudConfig {
 }
 
 function read(): CloudConfig | null {
-  const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim()
-  const key = (
-    (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
-    (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)
-  )?.trim()
+  const env = import.meta.env as Record<string, string | undefined>
+  // VITE_* names, or the NEXT_PUBLIC_* names the Vercel Supabase integration creates.
+  const first = (...names: string[]) => names.map((n) => env[n]?.trim()).find((v) => v)
+  const url = first('VITE_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL')
+  const key = first(
+    'VITE_SUPABASE_PUBLISHABLE_KEY', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+    'VITE_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  )
   if (!url || !key) return null
   if (!/^https?:\/\//.test(url)) return null
   assertBrowserSafeKey(key)

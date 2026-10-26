@@ -157,8 +157,12 @@ works. To use Workers instead, deploy `dist/` with `wrangler.toml`:
 
 1. **Add New → Project**, then import the repo. The framework is detected as
    Vite.
-2. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` under
-   **Settings → Environment Variables**, then deploy.
+2. Either add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` under
+   **Settings → Environment Variables**, or connect the **Supabase integration**
+   (Vercel → Integrations). The app also reads the integration's
+   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or
+   `…_ANON_KEY`). Server-only secrets the integration adds, such as
+   `SUPABASE_SECRET_KEY` and `POSTGRES_PASSWORD`, are never bundled. Then deploy.
 3. `vercel.json` sets the SPA rewrite to `/index.html` and the security headers.
 
 ### Content Security Policy
