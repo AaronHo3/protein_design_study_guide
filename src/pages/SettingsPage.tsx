@@ -97,12 +97,10 @@ function ScheduleSection({ settings }: { settings: Settings }) {
 }
 
 function AccountSection() {
-  const mode = useStore((s) => s.repo?.mode)
   const userId = useStore((s) => s.repo?.userId)
   const sync = useStore((s) => s.sync)
   const data = useStore((s) => s.data)
   const [email, setEmail] = useState<string | null>(null)
-  const [simulate, setSimulate] = useState(isFailureSimulated())
 
   useEffect(() => {
     void getSupabase()?.auth.getUser().then(({ data: d }) => setEmail(d.user?.email ?? null))
@@ -123,12 +121,39 @@ function AccountSection() {
     await signOut()
   }
 
-  if (mode === 'demo') {
-    return (
-      <div className="space-y-3 text-[13px]">
-        <p className="text-muted">
-          Demo mode has no account. To enable sign-in and cloud sync, add your Supabase URL and publishable key to <code className="font-mono">.env.local</code> (see README) and restart.
-        </p>
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-[13px]">
+      <span>Signed in as <strong>{email ?? '…'}</strong></span>
+      <Button size="sm" className="ml-auto" onClick={() => void doSignOut()}><LogOut /> Sign out</Button>
+    </div>
+  )
+}
+
+function LocalStorageInfo() {
+  const [persisted, setPersisted] = useState<boolean | null>(null)
+  useEffect(() => {
+    void navigator.storage?.persisted?.().then(setPersisted).catch(() => setPersisted(null))
+  }, [])
+  return (
+    <>
+      <p>
+        Everything is saved automatically in this browser on this device. There’s no account, and nothing is sent anywhere.
+        {persisted === true && ' The browser has agreed to keep this data rather than clearing it to free up space.'}
+      </p>
+      <p>
+        Because this browser holds the only copy, download a backup now and then. Clearing this site’s data, or opening the
+        planner in a different browser, starts empty. To move to another computer, download a backup here and import it there.
+      </p>
+    </>
+  )
+}
+
+function LocalAdvanced() {
+  const [simulate, setSimulate] = useState(isFailureSimulated())
+  return (
+    <details className="text-[13px]">
+      <summary className="cursor-pointer text-muted">Advanced</summary>
+      <div className="mt-3 space-y-3">
         <label className="flex items-start gap-2">
           <input
             type="checkbox"
@@ -141,30 +166,30 @@ function AccountSection() {
           />
           <span>
             <span className="font-medium">Simulate save failures</span>
-            <span className="block text-faint">For testing: every save fails, so you can see error states, retry, and local note drafts.</span>
+            <span className="block text-faint">For testing only: every save fails, so you can see the error, Retry and draft-recovery states.</span>
           </span>
         </label>
         <Button
           variant="danger"
           size="sm"
           onClick={async () => {
-            const ok = await confirm({ title: 'Reset demo data?', body: 'All demo data in this browser will be deleted. Export a backup first if you want to keep it.', confirmLabel: 'Reset', destructive: true, typeToConfirm: 'RESET' })
+            const ok = await confirm({
+              title: 'Delete all data?',
+              body: 'Everything in this planner will be permanently deleted from this browser. Download a backup first if you might want it back.',
+              confirmLabel: 'Delete everything',
+              destructive: true,
+              typeToConfirm: 'DELETE',
+            })
             if (ok) {
               clearDemoData()
               window.location.reload()
             }
           }}
         >
-          Reset demo data
+          Delete all data…
         </Button>
       </div>
-    )
-  }
-  return (
-    <div className="flex flex-wrap items-center gap-3 text-[13px]">
-      <span>Signed in as <strong>{email ?? '…'}</strong></span>
-      <Button size="sm" className="ml-auto" onClick={() => void doSignOut()}><LogOut /> Sign out</Button>
-    </div>
+    </details>
   )
 }
 
@@ -186,7 +211,7 @@ export function SettingsPage() {
           options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'system', label: 'System' }]}
         />
       </Section>
-      <Section title="Account"><AccountSection /></Section>
+      {mode === 'cloud' && <Section title="Account"><AccountSection /></Section>}
       <Section title="Backups and data">
         <div className="space-y-4">
           <div className="space-y-1 text-[13px] text-muted">
@@ -196,11 +221,12 @@ export function SettingsPage() {
                 Cloud storage keeps your data available, but it isn’t a backup: export a JSON backup regularly and keep it somewhere safe.
               </p>
             ) : (
-              <p>Demo data lives only in this browser’s local storage. Clearing site data deletes it. Export a backup to keep it.</p>
+              <LocalStorageInfo />
             )}
-            <p>Unsaved note text is also kept in this browser until the server confirms it, so a failed save never loses your writing.</p>
+            {mode === 'cloud' && <p>Unsaved note text is also kept in this browser until the server confirms it, so a failed save never loses your writing.</p>}
           </div>
           <DataPanel />
+          {mode === 'demo' && <LocalAdvanced />}
         </div>
       </Section>
     </div>

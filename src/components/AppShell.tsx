@@ -4,7 +4,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Menu } from './ui/menu'
 import { cn } from '../lib/cn'
 import { useStore } from '../state/store'
-import { ConfirmHost, DemoBanner, SyncIndicator, Toaster } from './feedback'
+import { BackupReminder, ConfirmHost, SyncIndicator, Toaster } from './feedback'
 import { SessionDetail } from './session/SessionDetail'
 import { useOpenSession } from './session/useOpenSession'
 
@@ -82,7 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[70] focus:rounded focus:bg-surface focus:px-3 focus:py-2">
         Skip to content
       </a>
-      <DemoBanner />
+      <BackupReminder />
       <div className="flex min-h-0 flex-1">
         <aside className="hidden w-52 shrink-0 flex-col border-r border-line bg-surface lg:flex">
           <div className="px-4 pt-4 pb-3">

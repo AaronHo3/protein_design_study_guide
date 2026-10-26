@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthGate } from './auth/AuthGate'
 import { AppShell } from './components/AppShell'
-import { ConfirmHost, DemoBanner, Toaster } from './components/feedback'
+import { ConfirmHost, Toaster } from './components/feedback'
 import { Button } from './components/ui/button'
 import { Spinner } from './components/ui/misc'
 import { applyTheme, watchSystemTheme } from './lib/theme'
@@ -45,7 +45,6 @@ function Workspace() {
   if (!settings?.onboarded) {
     return (
       <>
-        <DemoBanner />
         <OnboardingPage />
         <Toaster />
         <ConfirmHost />

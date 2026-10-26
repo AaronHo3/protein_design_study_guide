@@ -1,6 +1,8 @@
 import { AlertTriangle, CheckCircle2, CloudOff, Info, Loader2, RotateCw, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { backupReminderDue, lastBackupAt, snoozeBackupReminder } from '../lib/backupReminder'
 import { cn } from '../lib/cn'
+import { exportJson } from './settings/DataPanel'
 import { useConfirmStore } from '../state/confirm'
 import { useStore } from '../state/store'
 import { useToasts } from '../state/toasts'
@@ -107,7 +109,7 @@ export function SyncIndicator({ compact = false }: { compact?: boolean }) {
   const retry = useStore((s) => s.retrySync)
   const discard = useStore((s) => s.discardUnsaved)
   const online = useOnline()
-  const where = mode === 'demo' ? 'this browser' : 'the cloud'
+  const where = mode === 'demo' ? 'this browser' : 'your account'
 
   if (sync.failed && compact) {
     return (
@@ -157,13 +159,41 @@ export function SyncIndicator({ compact = false }: { compact?: boolean }) {
   )
 }
 
-export function DemoBanner() {
+/**
+ * In local mode this browser holds the only copy of the data, so a quiet
+ * reminder appears when there's been no backup for a while.
+ */
+export function BackupReminder() {
   const mode = useStore((s) => s.repo?.mode)
-  if (mode !== 'demo') return null
+  const hasContent = useStore((s) => s.data.sessions.length > 0 || s.data.topics.length > 0 || s.data.notes.length > 0)
+  const [due, setDue] = useState(() => backupReminderDue())
+  if (mode !== 'demo' || !hasContent || !due) return null
+  const last = lastBackupAt()
   return (
-    <div className="border-b border-warn/30 bg-warn-soft px-4 py-1.5 text-center text-[12.5px] text-warn">
-      <strong className="font-semibold">Local demo mode.</strong> Supabase isn’t configured, so data is stored only in
-      this browser and is not synced or backed up. Export a backup from Settings to keep it.
+    <div role="status" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-line bg-surface-2 px-4 py-1.5 text-[12.5px] text-muted">
+      <span>
+        Your plan is saved in this browser only. {last ? `Last backup ${new Date(last).toLocaleDateString()}.` : 'You haven’t downloaded a backup yet.'}
+      </span>
+      <button
+        type="button"
+        className="font-medium text-accent hover:underline"
+        onClick={() => {
+          exportJson(useStore.getState().data)
+          setDue(false)
+        }}
+      >
+        Download backup
+      </button>
+      <button
+        type="button"
+        className="text-faint hover:text-fg hover:underline"
+        onClick={() => {
+          snoozeBackupReminder()
+          setDue(false)
+        }}
+      >
+        Remind me later
+      </button>
     </div>
   )
 }

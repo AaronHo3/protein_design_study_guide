@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { countRows, makeBackup, mergeSnapshots, notesToMarkdown, parseBackup, remapIds, type ImportSummary } from '../../domain/backup'
 import { TABLE_ORDER, type Snapshot } from '../../domain/types'
 import { describeError, RepoError } from '../../data/repository'
+import { markBackedUp } from '../../lib/backupReminder'
 import { downloadText } from '../../lib/download'
 import { confirm } from '../../state/confirm'
 import { getOutbox, useStore } from '../../state/store'
@@ -26,6 +27,7 @@ function stamp(): string {
 
 export function exportJson(data: Snapshot): void {
   downloadText(`study-planner-backup-${stamp()}.json`, JSON.stringify(makeBackup(data), null, 2))
+  markBackedUp()
 }
 
 interface Pending {
@@ -35,14 +37,15 @@ interface Pending {
   exportedAt: string | null
 }
 
-export function DataPanel() {
+/** `importOnly` is used on the setup screen to restore an existing backup into a new workspace. */
+export function DataPanel({ importOnly = false }: { importOnly?: boolean }) {
   const data = useStore((s) => s.data)
   const replaceAll = useStore((s) => s.replaceAll)
   const fileRef = useRef<HTMLInputElement>(null)
   const [pending, setPending] = useState<Pending | null>(null)
   const [errors, setErrors] = useState<string[] | null>(null)
   const [mode, setMode] = useState<'merge' | 'replace'>('merge')
-  const [backupFirst, setBackupFirst] = useState(true)
+  const [backupFirst, setBackupFirst] = useState(!importOnly)
   const [busy, setBusy] = useState(false)
 
   const onFile = async (file: File | undefined) => {
@@ -117,11 +120,15 @@ export function DataPanel() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        <Button variant="primary" onClick={() => exportJson(data)}><Download /> Export full backup (JSON)</Button>
-        <Button onClick={() => downloadText(`study-notes-${stamp()}.md`, notesToMarkdown(data), 'text/markdown')} disabled={data.notes.length === 0}>
-          <Download /> Export notes (Markdown)
-        </Button>
-        <Button onClick={() => fileRef.current?.click()}><Upload /> Import backup…</Button>
+        {!importOnly && (
+          <>
+            <Button variant="primary" onClick={() => exportJson(data)}><Download /> Export full backup (JSON)</Button>
+            <Button onClick={() => downloadText(`study-notes-${stamp()}.md`, notesToMarkdown(data), 'text/markdown')} disabled={data.notes.length === 0}>
+              <Download /> Export notes (Markdown)
+            </Button>
+          </>
+        )}
+        <Button onClick={() => fileRef.current?.click()}><Upload /> {importOnly ? 'Restore from a backup…' : 'Import backup…'}</Button>
         <input
           ref={fileRef}
           type="file"

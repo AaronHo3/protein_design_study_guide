@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from '../components/ui/button'
+import { DataPanel } from '../components/settings/DataPanel'
 import { Field, Input } from '../components/ui/field'
 import { cn } from '../lib/cn'
 import { compact, insert, update, type Change } from '../domain/changes'
@@ -100,8 +101,14 @@ export function OnboardingPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Set up your study planner</h1>
       <p className="mt-1 text-sm text-muted">
         You design the plan; the planner makes each day easy to follow. Everything here can be changed later.
-        {mode === 'demo' && ' (Demo mode: stored in this browser only.)'}
+        {mode === 'demo' && ' Your plan is saved privately in this browser — no account needed.'}
       </p>
+
+      <section className="mt-6 rounded-lg border border-line bg-surface p-4" aria-labelledby="restore-h">
+        <h2 id="restore-h" className="text-sm font-semibold">Already have a backup?</h2>
+        <p className="mt-0.5 mb-3 text-[13px] text-muted">Restore a backup file you downloaded from this planner, and skip setup entirely.</p>
+        <DataPanel importOnly />
+      </section>
 
       <section className="mt-8 space-y-3" aria-labelledby="start-h">
         <h2 id="start-h" className="text-sm font-semibold">1. How do you want to start?</h2>

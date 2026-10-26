@@ -8,10 +8,11 @@ planner makes each study day easy to open and follow.
   month/week/agenda calendars, and a weekly planning view.
 - **Studying:** a focused Today view with tasks, resources, notes, completion
   and "move or defer" controls.
-- **Data:** stored in your own Supabase Postgres database, private to your
-  account through row-level security, and available on any device you sign in
-  from. With no Supabase configured, it runs in a clearly labelled browser-only
-  demo mode.
+- **Data:** saved automatically and privately in your browser. There's no
+  account, no server, and nothing is sent anywhere. Download a JSON backup now
+  and then; the app reminds you every couple of weeks.
+- **Optional:** if you ever want sign-in and sync across devices, it can use
+  your own Supabase database instead (§2). You don't need this for personal use.
 
 Stack: React 19, TypeScript, Vite, Tailwind CSS 4, Radix primitives
 (shadcn-style), lucide icons, dnd-kit, react-markdown, zod and supabase-js. The
@@ -19,22 +20,35 @@ app builds to static files; there is no custom backend.
 
 ---
 
-## 1. Run locally (demo mode, no account needed)
+## 1. Use it (no account needed)
 
 Requires Node 20.19+ or 22+ (developed on Node 24).
 
 ```bash
-npm install
-npm run dev          # http://localhost:5173
+npm install          # first time only
+npm run dev          # then open http://localhost:5173
 ```
 
-When no Supabase variables are set, a banner reads **"Local demo mode"**:
+That's all. Your plan, notes and progress are saved in this browser as you go,
+and they're still there after you close the browser or restart the computer.
 
-- Data is kept in this browser's localStorage. It is not synced or backed up.
-- There is no sign-in.
-- Settings → Account has a **Simulate save failures** switch. Use it to see the
-  error, Retry and draft-recovery states.
-- Two tabs share the same storage, so you can test cross-"device" note conflicts.
+Good to know:
+
+- **Use the same address and browser every time.** Browsers keep data per
+  address, so `http://localhost:5173` and `http://localhost:4173` each have
+  their own separate, empty planner. A different browser also starts empty.
+- **Back up occasionally.** Use **Settings → Backups and data → Export full
+  backup**, or the reminder bar at the top. The backup file is also how you
+  move your plan to another computer: export it on one and import it on the
+  other.
+- **Clearing this site's data in browser settings deletes the planner.**
+  Restore it from a backup.
+- Settings → Backups and data → **Advanced** has *Simulate save failures* (for
+  testing only) and *Delete all data*.
+
+If you'd rather open it from a bookmark without running `npm run dev`, you can
+deploy it as a free static site without configuring anything (§3). It then
+stores data in the browser at that site's address.
 
 Other commands:
 
@@ -45,7 +59,11 @@ npm run build        # static output in dist/
 npm run preview      # serve dist/ at http://localhost:4173
 ```
 
-## 2. Set up Supabase (cloud sync and accounts)
+## 2. Optional: Supabase (sign-in and sync across devices)
+
+Skip this section unless you want accounts and cloud sync. Without it the app
+runs fully in local mode.
+
 
 1. **Create a project** at <https://supabase.com/dashboard>. The free plan is
    enough (see §5).
@@ -94,15 +112,28 @@ npm run preview      # serve dist/ at http://localhost:4173
      hour**, and only to addresses that are members of your Supabase
      organization. That is fine for your own account. For anyone else, set up
      custom SMTP (**Authentication → Emails → SMTP Settings**).
-6. **Restart** `npm run dev`. You'll see the sign-in screen instead of the demo
-   banner.
+6. **Restart** `npm run dev`. You'll see the sign-in screen instead of opening
+   straight into the planner.
+7. **Keep it private (single user):** after creating and confirming your own
+   account, go to **Authentication → Sign In / Providers** and turn off **Allow
+   new users to sign up**. Others couldn't see your data anyway (RLS), but this
+   stops strangers who find the URL from creating accounts.
+8. **Bring over local data:** in the old local version, use Settings → Export
+   full backup. After signing in to the new version, choose **Restore from a
+   backup** on the setup screen.
+9. **Free-plan pausing:** a free project pauses after a week with no requests.
+   Regular use keeps it awake. If it pauses, resume it from the Supabase
+   dashboard; the data is kept.
 
 ## 3. Deploy
 
-The build output is a static single-page app in `dist/`. Set the two `VITE_…`
-variables in the host's dashboard. Vite inlines them at **build time**, so
-redeploy after you change them. Add the deployed origin to Supabase Redirect
-URLs (§2.5).
+The build output is a static single-page app in `dist/`.
+
+- **Local mode** (no account): deploy as-is and **skip the environment-variable
+  steps below**. Each browser that opens the site keeps its own private copy.
+- **With Supabase:** set the two `VITE_…` variables in the host's dashboard.
+  Vite inlines them at **build time**, so redeploy after you change them. Also
+  add the deployed origin to Supabase Redirect URLs (§2.5).
 
 ### Cloudflare Pages
 

@@ -1,5 +1,5 @@
 // Decides which data source the app uses:
-// - no Supabase config → local demo mode (clearly labelled), no auth
+// - no Supabase config → local mode: data stays in this browser, no account
 // - Supabase config → email/password auth; data loads only for the signed-in user
 import type { Session as AuthSession } from '@supabase/supabase-js'
 import { useEffect, useState, type ReactNode } from 'react'
@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Spinner } from '../components/ui/misc'
 import { LocalRepo } from '../data/localRepo'
 import { SupabaseRepo } from '../data/supabaseRepo'
+import { requestPersistentStorage } from '../lib/backupReminder'
 import { isDemoMode } from '../lib/config'
 import { getSupabase } from '../lib/supabase'
 import { useStore } from '../state/store'
@@ -21,7 +22,11 @@ function DemoGate({ children }: { children: ReactNode }) {
   const init = useStore((s) => s.init)
   const repo = useStore((s) => s.repo)
   useEffect(() => {
-    if (!repo) void init(new LocalRepo())
+    if (!repo) {
+      void init(new LocalRepo())
+      // This browser holds the only copy, so ask it not to evict the data.
+      void requestPersistentStorage()
+    }
   }, [init, repo])
   return <>{children}</>
 }
