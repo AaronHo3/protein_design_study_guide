@@ -18,6 +18,11 @@ Stack: React 19, TypeScript, Vite, Tailwind CSS 4, Radix primitives
 (shadcn-style), lucide icons, dnd-kit, react-markdown, zod and supabase-js. The
 app builds to static files; there is no custom backend.
 
+# Demo Video
+
+https://github.com/user-attachments/assets/c416e1fb-622e-420a-a8d8-8c9becd89231
+
+
 ---
 
 ## 1. Use it (no account needed)
@@ -174,9 +179,6 @@ this CSP with no violations. If you use a **custom Supabase domain**, add it to
 
 ## 4. What to verify with your own Supabase project
 
-I couldn't run these without your credentials. Everything else was checked in
-demo mode and by automated tests (§6).
-
 | # | Check | How |
 |---|-------|-----|
 | 1 | Sign-up, confirm, sign-in | Create an account, click the email link, sign in. |
@@ -284,26 +286,3 @@ A personal planner's data is a few MB at most, far below these limits.
   - Raw HTML in notes is never rendered.
   - Only `http(s)` links become clickable.
   - Strict CSP.
-
-## 8. Limitations (version 1)
-
-- **No offline mode.** Changes made offline are kept in memory and retried. A
-  warning appears if you try to close the tab, but unsent changes other than
-  note drafts are lost if the tab is closed anyway.
-- **Conflicts:** detection covers **note text** only. Other fields (task
-  checks, titles, moves) are last-write-wins between devices. Data refreshes
-  when a tab regains focus, which keeps that window small.
-- **Realtime:** no live push. Another device's changes appear on focus or
-  reload.
-- **Undo:** only the most recent change can be undone, and only in the current
-  tab.
-- **Drag-and-drop:** works in the desktop week view. Agenda and mobile views
-  use the Move / reorder menus, which are also the keyboard-accessible route.
-- **Recurring occurrences:** a deleted occurrence is recreated if you generate
-  occurrences again for that date. The preview lists every date before
-  anything is added, so you can narrow the range. Alternatively, keep the
-  occurrence and mark it skipped and optional.
-- **Resources:** links and references only. No uploads, scraping or metadata
-  lookup.
-- **Bundle size:** about 330 KB gzipped in one chunk, with no code-splitting
-  yet.
